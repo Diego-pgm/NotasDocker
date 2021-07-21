@@ -1,0 +1,144 @@
+Docker
+
+Comandos:
+# Para ver mi version de ubuntu 
+>>lsb_release -a 
+
+# Correr un hello world de docker
+>> docker run hello-world
+
+# Para ver mis imagenes (usar grep para filtrar)
+>> docker images
+
+# Para descargar una imagen
+>> docker pull mongo/mysql:8.0.0/etc
+
+# para ver los procesos
+>> docker ps -a 
+
+# Para ver los contenedores
+>> docker ps 
+
+# Agregar un usuario de docker
+>> sudo usermod -aG docker diego
+
+# Crear una imagen
+>> docker build -t nom_imagen:tag .
+>> docker build -t apache .
+
+# Crear una imagen con un archivo diferente al Dockerfile
+>> docker build -t nom-imagen -f nom-archivo . 
+
+# Ver las capas de una imagen
+>> docker history -H nom_imagen:tag
+
+# Crear un contenedor
+>> docker run -d --name nom_contenedor -p puerto-maq:puerto-cont nom_imagen:tag 
+
+# Eliminar un contenedor.
+>> docker rm -fv nom_contenedor
+
+# Eliminar una imagen
+>> docker rmi nombre:tag 
+>> docker rmi id
+
+# Eliminar las Dangling images (imagenes a las que no se cambia el tag y salen como <none>)
+>> docker images -f dangling=true -q | xargs docker rmi
+
+
+[+] DockerFile [+]
+
+Es un archivo que contiene las capas de una imagen y sus campos son:
+
+FROM os/img : Desde la imagen o sistema op que va a ser nuestra imagen personalizada.
+RUN comando : Corre los comandos.
+COPY/ADD carpeta /var/www/html : Sirve para copiar archivos de nuestra maquina a la imagen.
+ENV nom-var valor : Crea una variable y le asigna un valor.
+WORKDIR directorio : Nos situa en un directorio para trabajar (a veces se usa /var/www/html cuando es apache).
+EXPOSE num-puerto : Nos permite establecer un puerto para posteriormente utilizarlo.
+LABEL label=valor : Agregan metadata a una imagen.
+USER nombre: El usuario que esta ejecutando las tareas.
+VOLUME : Es una manera de colocar la data persistente en el contenedor.
+CMD apachectl -DFOREGROUND : Es lo que mantiene vivo al contenedor.
+
+
+Crear un script para probar el CMD que se llame run.sh:
+#!/bin/bash
+
+echo "Iniciando container..."
+echo "INICIADO!!" > /var/www/html/ini.html
+apachectl -DFOREGROUND
+
+Con dockerignore le decimos la imagen que archivos ignorar.
+
+# Para ver el peso de los archivos en una carpeta
+>>du -shc * 
+
+# Para construir sin los archivos que se especifican en el .dockerignore
+>> docker build -t apache .|less
+
+Ejemplo de un Dockerfile:
+FROM ubuntu:21.04
+
+RUN apt-get update
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt-get -qq -y install apache2
+
+CMD apachectl -DFOREGROUND
+
+
+Buenas practicas
+
+1. Las imagenes deben ser efimeras (destruirse con facilidad).
+2. Debe haber un solo servicio por contenedor (o por imagen).
+3. Agregar archivos pesados al .dockerignore
+4. Reducir el numero de capas que tiene la capa.
+5. Separar argumentos en muchas lineas.
+6. Varios argumentos en una sola capa.
+
+Ej 4,5,6:
+FROM nginx
+
+RUN \
+  echo "1" >> /usr/share/nginx/html/test.txt && \   |
+  echo "2" >> /usr/share/nginx/html/test.txt && \    > Una sola capa/multiargumentos/estetico
+  echo "3" >> /usr/share/nginx/html/test.txt        |
+
+7. No instalar paquetes innecesarios.
+
+No deberian haber imagenes que tengan apache y mysql al mismo tiempo.
+
+
+Para crear un certificado ssl
+>> openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout docker.key -out docker.crt
+
+
+Para habilitar ssl con apache se tiene que crear un archivo ssl.conf
+<VirtualHost *:443>
+        ServerAdmin localhost
+        DocumentRoot /var/www/html
+        SSLEngine on
+        SSLCertificateFile apache.crt
+        SSLCertificateKeyFile apache.key
+</VirtualHost>
+
+
+
+# Construir apps Java con maven y similares
+
+El Dockerfile para construir una app "sencilla" de hello world esta en esta carpeta
+Se necesita tener un archivo .jar
+
+
+# Multi-Stage-Build 
+Es mejor construir las apps asi porque toma los archivos desde el ultimo 
+from.
+
+Por ejemplo si se tiene un dockerfile que tenga una creacion de ubuntu y despues
+llama a alpine docker solo va a tomar en cuenta a los archivos que estan despues del from de alpine como en
+el Dockerfile2 de multi.
+
+de esta manera las imagenes que vamos a construir son mas ligeras ya que docker va a pensar que lo que esta
+antes del ultmo FROM va a ser para instalar dependencias o crear archivos temporales.
+
+

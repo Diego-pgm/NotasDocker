@@ -1,0 +1,88 @@
+Contenedores
+
+
+Los contenedores son una instancia de ejecucion de una imagen.
+
+Los contenedores son temporales, si queremos que un cambio sea persistente tenemos que definirlo en la imagen
+nunca lo definimos en el contenedor porque los cambios en el contenedor son temporales.
+
+Para hacer cambios en una imagen se necesita crear una nueva porque las imagenes solo son de lectura.
+
+Se pueden crear varios contenedores a partir de una imagen.
+
+
+#!!!!!! NO PUEDEN HABER DOS CONTENEDORES CON EL MISMO NOMBRE PERO SI CON LA MISMA IMAGEN !!!!!!#
+
+
+# Listar/Mapear puertos
+
+Listar los contenedores corriendo:
+>> docker ps
+
+Listar los contenedores detenidos:
+>> docker ps -a
+
+Una imagen es un requisito para crear un contenedor.
+
+Para descargar una imagen por ejemplo Jenkins:
+>> docker pull jenkins/jenkins
+
+
+# Crear contenedores
+>> docker run [ARGUMENTOS] [IMAGEN]
+
+Argumentos [Modifican la salida del comando docker ps]:
+-d : Se corre el contenedor en segundo plano.
+>> docker run -d jenkins
+
+* Si se accede al navegador no se va a observar nada porque se tiene que recorrer al mapeo de puertos.*
+
+-p : Se mapean los puertos
+>> docker run -d -p 8080:8080 jenkins
+
+--name : Asigna el nombre del contenedor.
+>> docker run -d -p 80:80 --name nom_contenedor jenkins
+
+# Salida del comando docker ps (Con un contenedor corriendo)
+1. CONTAINER ID: Es el id del contenedor.
+2. IMAGE: La imagen con la que se crea el contenedor.
+3. COMMAND: El comando que ejecuta la imagen.
+4. PORTS: Los puertos que expone el contenedor.
+
+[Cuando en la salida se ve 0.0.0.0:puerto->puerto quiere decir que todas las interfaces de mi maquina estan] 
+[siendo mapeadas en el puerto despues de la flecha]
+
+5. NAMES: El/los nombres de los contenedores.
+
+# Eliminar contenedores
+>> docker rm -f nom_contenedor
+
+
+
+[Probar con jenkins en el puerto 9091->8080]
+
+# Renombrar nun jenkins 
+>> docker rename nom_viejo nom_nuevo
+
+# Para dejar de correr un contenedor
+>> docker stop nom_contenedor
+
+# Para iniciar un contenedor (que esta en stop)
+>> docker start nom_contenedor
+
+# Para reiniciar un contenedor 
+>> docker restart nom_contenedor
+
+# Modificar el contenido de un contenedor con una terminal
+>> docker exec -u usuario -ti nom_contenedor bash
+
+ARGS:
+-u : Usuario con el que se ejecuta el bash
+-ti : terminal interactiva
+>> docker exec -ti jenkins bash
+>> docker exec -u root -ti jenkins bash
+
+* Este comando nos sirve para (en el ejemplo de jenkins) se puede ingresar a un archivo para realizar un login
+[Corre como debian]
+
+

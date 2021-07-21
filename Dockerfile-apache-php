@@ -1,0 +1,15 @@
+FROM ubuntu
+
+RUN apt-get update
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get -qq -y install \
+  apache2                  \
+  php                      \
+  php-cli                  \
+  php-common
+
+COPY index.php /var/www/html/index.php
+
+CMD apachectl -DFOREGROUND

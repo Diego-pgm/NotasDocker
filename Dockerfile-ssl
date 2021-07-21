@@ -1,0 +1,25 @@
+FROM ubuntu:21.04
+
+RUN apt-get update
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt-get -qq -y install \
+      apache2 \
+      php \
+      php-cli \
+      php-common\
+      openssl
+      
+
+RUN echo "<?php phpinfo(); ?>" > /var/www/html/hola.php
+
+COPY startbootstrap-sb-admin-2 /var/www/html
+
+COPY ssl.conf /etc/httpd/conf.d/default.conf
+
+COPY docker.crt /docker.crt
+
+COPY docker.key /docker.key
+
+EXPOSE 443
+
+CMD apachectl -DFOREGROUND
