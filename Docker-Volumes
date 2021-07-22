@@ -1,0 +1,226 @@
+Volumenes
+
+Son una herramienta que nos permite almacenar data persistente del contenedor.
+
+Hay tres tipos de volumenes:
+
+Host: Son los volumenes que se almacenan en el host de docker y se almacenan en una carpet de nuestro filesys
+que nosotros especificamos.
+
+Anonymus: No se define una carpeta y docker genera una carpeta random.
+
+Named Volumes: Son carpetas que yo creo pero son administradas por docker y si tienen un nombre. 
+
+
+# Por que son importantes los volumenes
+
+Son importantes porque mantienen los cambios que se hacen en un contenedor, como la informacion importante
+de una base de datos.
+
+
+
+# Como crear un volumen de host.
+
+0. Crear una carpeta en /opt de mysql
+   >> sudo mkdir /opt/mysql
+
+1. Crear una base de datos con docker con un volumen que copie de la carpeta de mi maquina a la de mysql
+del contenedor.
+   >> docker run -d --name db -p 3306:3306 -e "MYSQL_ROOT_PASSWORD=1234" -v /opt/mysql:/var/lib/mysql
+      mysql:5.7
+
+2. Observar lo que hay en la carpeta de mysql de opt.
+
+3. Ingresar al contenedor de mysql.
+   >> mysql -u -root -h 127.0.0.1 -p12345678
+
+4. Mostrar las bases de datos
+   >> show databases;
+
+5. Crear tres nuevas bases de datos.
+   >> create database test;
+   >> create database test2;
+   >> create database test3;
+
+6. Borrar la base de datos y volver a crearla para ver si persistieron las carpetas.
+
+
+# Como crear volumenes anonimos
+
+1. Crear un nuevo contenedor de mysql pero sin definir la carpeta de mi sistema.
+   >> docker run -d --name db -p 3306:3306 -e "MYSQL_ROOT_PASSWORD=1234" -v /var/lib/mysql mysql:5.7
+
+[docker rm -f nom-contenedor : Para mantener los volumenes anonimos]
+
+
+# Comprender la instruccion VOLUME en un Dockerfile
+
+1. Crear un Dockerfile que sea de ubuntu y darle un volumen /opt/.
+[Esta instruccion crea un volumen anonimo]
+
+2. Construir una imagen a partir del dockerfile.
+   >> docker build -t test-vol .
+
+3. Enlistar los volunenes. [No va a haber ninguno]
+   >> docker volume ls
+
+4. Crear un contenedor con esa imagen.
+   >> docker run -dti --name test test-vol
+ 
+5. Enlistar los volumenes. [Va a haber uno anonimo]
+  >> docker volume ls
+
+6. Ingresar a la carpeta /opt del contenedor.
+  >> docker exec -ti test bash
+  >> cd /opt
+
+7. Crear dos archivos en esa carpeta.
+   >> touch file1
+   >> touch file2
+
+8. Buscar la ruta root para ingresar al volumen.
+   >> docker info | grep -i root
+
+9. Ingresar al documento root.
+   >> cd /salida/docker info/volumes
+
+10. Ingresar al volumen y ver los archivos. y asi se guardo correctamente un volumen.
+
+
+# Volumenes nombrados
+
+[Para eliminar los volumenes creados]
+0. Cambiar al directorio donde esta el document root y cambiar de usuario a root y meterse a la carpeta volmes.
+   >> docker info | grep -i root
+   >> sudo su
+   >> cd /var/lib/docker/volumes
+
+1. Crear un volumen con nombre.
+   >> docker volume create nom-volumen
+   >> docker volume create mysql-data
+   >> docker volume rm mysql-data -> Elimina un volumen
+   >> docker volume create my-vol
+
+2. Enlistar los volumenes.
+   >> docker volume ls
+
+3. Crear un contenedor de mysql.
+   >> docker run -d --name mysql -vmy-vol:/var/lib/mysql -p 3306:3306 -e "MYSQL_ROOT_PASSWORD=1234" -e 
+      "MYSQL_DATABASE=docker-db" mysql:5.7
+
+4. Observar la info en mi volumen. en el root /var/lib/docker/volumes...
+
+[No se va a eliminar con el comando docker rm -fv y va a ser persistente]
+ 
+
+
+# Dangling volumes
+
+
+Son lo mismo que en las imagenes cuando no se cambia el tag de la imagen, en el caso de los volumenes se van
+a crear cuando creamos varios volumenes anonimos.
+
+Para eliminarlos podemos hacer el comando:
+>> docker volume ls -f dangling=true -q | xargs docker volume rm
+
+
+# Persistiendo la data con mongo
+
+0. Crear una carpeta que se llame mongo en /opt
+
+1. Correr un contenedor con la imagen de mongo, en el puerto de mongo con un volumen.
+   >> docker run -d --name mongo -p 2707:2707 -v /opt/mongo/:/data/db mongo
+
+2. Ingresar al contenedor de mongo.
+   >> docker exec -ti mongo
+
+3. Ingresar a mongo en el contenedor.
+   > mongo
+
+4. Crear una base de datos mongo.
+   > use mydb
+
+5. Mostrar las bases de datos.
+   > show dbs
+
+6. Salir y eliminar todos los contenedores.
+   >> docker rm -fv $(docker ps -aq)
+
+7. Crear nuevamente un contenedor de mongo.
+
+8. Ingresar al contenedor ingresar a mongo y mostrar las bases de datos.
+
+[Si se crea un contenedor sin la opcion de volumen no se guarda las db]
+
+
+
+
+
+# Persistiendo data en Jenkins
+
+0. Crear la carpeta jenkins en la carpeta en la que te encuentras.
+
+1. Crear un contenedor de jenkins.
+   >> docker run -d --name jenkins -p 8080:8080 -v /./jenkins/:/var/jenkins_home jenkins
+
+2. Observar el contenido de un archivo desde fuera del contenedor
+   >> docker exec jenkins bash -c "cat /var/jenkins_home/secrets/initialAdminPassword"
+
+3. Crear una nueva tarea en jenkins
+
+4. Eliminar el contenedor de jenkins y ver lo que esta en jenkins.
+
+5. Crear de nuevo un contenedor e ir a la pagina de internet.
+
+[Si no se le pasa como argumento ningun volumen jenkins se vuelve a iniciar normal]
+ 
+
+
+
+# Persistiendo en nginx
+
+0. Crear una carpeta en este directorio donde se van a guardar los logs nginx se va a llamar.
+
+1. Crear un contenedor basico de nginx.
+   >> docker run -d --name nginx nginx
+
+2. Ir al directorio donde se guardan los logs.
+   >> ls /var/log/nginx
+
+3. Eliminar el contenedor.
+
+4. Crear un contenedor con volumen.
+   >> docker run -d --name nginx -p 80:80 -v /home/diego/Docker/nginx2/:/var/log/nginx nginx
+
+
+
+
+# Comparte volumenes entre contenedores
+
+0. Crear un directorio que se llame volumen.
+
+1. Crear otro directorio que se llame compartido
+
+2. Crear un dockerfile (en volumen) con centos que copie un archivo, copiar start.sh en /start.sh y que ese
+sea el comando CMD, antes hacer un RUN para cambiar permisos de /start.sh.
+
+3. Crear el archivo start.sh que tenga:
+#!/bin/bash
+
+while true; do
+  echo "<p> $(date +%H:%M:%S) </p>">> /opt/index.html && \
+  sleep 10 
+done
+
+4. Construir la imagen del dockerfile.
+   >> docker build -t generador .
+
+5. Crear un contenedor con un volumen en la carpeta compartido.
+   >> docker run -v $PWD/compartido:/opt -d --name gen generador
+
+6. Ver el archivo que esta corriendo la hora en compartido.
+
+7. Crear un contenedor de nginx.
+   >> docker run -d --name nginx -v $PWD/compartido:/usr/share/nginx/html -p 80:80 nginx:alpine
+
+8. Ir a localhost en brave.

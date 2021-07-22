@@ -1,0 +1,118 @@
+Redes en Docker
+
+La red en docker por defecto se llama docker0 y asigna un rango de subred.
+>> ip a | grep docker [Asi se ve el ip de docker]
+
+A cada contenedor se le va asignar un ip de esa subred, para ver los ip:
+>> docker inspect nom-contenedor
+
+Para mirar todas las redes que nosotros tenemos (buscar la red bridge):
+>> docker network ls 
+
+Inspeccionar la red:
+>> docker network inspect bridge
+
+Bridge es la red por defecto
+
+Se puede hacer ping(en unix) entre contenedores que estan en la misma red.
+
+
+# Crear una red definida por el usuario
+
+Va a ser una red diferente a Bridge.
+
+1. El comando para crearla es:
+   >> dcker network create nom-red
+
+2. Definir el gateway de la red y la subred.
+   >> docker network create -d bridge --subnet 172.124.10.0/24 --gateway 172.124.10.1 docker-test-network
+
+
+# Inspeccionar redes
+
+Para inspeccionar redes:
+>> docker network inspect nom-red |less
+
+Aqui se pueden ver campos como:
+1. Name: Nombre de la red.
+2. Id: El id de la red.
+3. Subnet: La subnet.
+4. Gateway: El gateway.
+
+
+
+# Agregar contenedores a una red distinta a la de default
+
+1. Crear un contenedor simple centos/ubuntu -dti.
+   >> docker run -dti --name prueba centos/ubuntu
+
+2. docker inspect prueba para ver que esta en la red Bridge.
+
+3. Cambiar la red desde la creacion del contenedor.
+   >> docker run --network nom-red -dti --name prueba2 centos/ubuntu
+
+4. Inspeccionar para ver que la red en la que se conecto es otra.
+
+
+# Conectar contenedores a la misma red
+
+1. Crear dos contenedores en una red de prueba con imagenes de ubuntu/centos.
+   >> docker run -d --network nom-red --name cont1 -ti centos
+   >> docker run -dti --network nom-red --name cont2 centos
+
+2. Ejecutar un comando que tenga un ping del contenedor 1 al 2.
+   >> docker exec cont1 bash -c "ping cont2"
+
+[Esto se puede lograr ya que en las redes definidas por usuario se pueden comunicar los contenedores por su]
+[nombre y no por los ips]
+
+
+
+# Conectar contenedores en distintas redes
+
+Se conectan las redes por medio de docker network connect.
+>> docker network connect nom-red [que no esta en el contenedor] nom-contenedor
+>> docker network connect docker-red cont3 [esta conectado a la red docker-test]
+
+Comprobar relaizando un ping de una a otra
+
+Para desconectar:
+>> docker network disconnect nom-red nom-contenedor
+
+
+# Eliminar redes
+
+Se tienen que eliminar todos los contenedores en esa red antes
+
+Comando para eliminar redes:
+>> docker network rm nom-red
+
+
+# Asignar ips a los contenedores
+
+Crear una red con una subnet que queramos un gateway el driver bridge y nombre.
+>> docker network create --subnet 172.128.10.0/24 --gateway 172.128.10.1 -d bridge my-net
+
+Crear un contenedor con una opcion --ip.
+>> docker run --network my-net --ip 172.128.10.50 -d --name ngnx -ti centos
+
+
+
+# Red Host
+
+Es la red de nuestra maquina
+
+Para crear un contenedor en la red de nuestro sistema [Host]:
+>> docker run --network host -d --name tst1 -ti centos
+
+[Instalar net-tools en el contenedor para ver el ip desde el contenedor]
+
+
+# La red None
+
+Es una red que viene por defecto y sirve para que los contenedores que estan en esa red no tengan red.
+
+Crear un contenedor en la red None.
+>> docker run --network none --name hola -d -ti centos
+
+ 
