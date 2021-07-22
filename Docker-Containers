@@ -43,6 +43,12 @@ Argumentos [Modifican la salida del comando docker ps]:
 --name : Asigna el nombre del contenedor.
 >> docker run -d -p 80:80 --name nom_contenedor jenkins
 
+-dti : Crear una imagen con un sistema operativo
+>> docker run -dti --name nom_cont imagen
+
+-e : Crear una variable de entorno
+>> docker -e "nom-var=valor-var"
+
 # Salida del comando docker ps (Con un contenedor corriendo)
 1. CONTAINER ID: Es el id del contenedor.
 2. IMAGE: La imagen con la que se crea el contenedor.
@@ -84,5 +90,340 @@ ARGS:
 
 * Este comando nos sirve para (en el ejemplo de jenkins) se puede ingresar a un archivo para realizar un login
 [Corre como debian]
+
+# Eliminar varios contenedores a la vez
+>> docker ps -q | xargs docker rm -f 
+
+# Variables de entorno
+
+[Usar un dockerfile de ubuntu con una variable y que agrege un usuario]
+Crear una variable en el dockerfile y otra en la imagen y checarlas en la terminal del contenedor
+
+Se van a definir en dos lugares:
+1. Dockerfile 
+2. Desde el comand run al crear el contenedor
+>> docker run -dti -e "prueba1=4321" --name env env
+
+
+# Requisitos previos para testear MySQL
+
+Correr el comando para crear un contenedor en un OS
+>> docker run --rm -ti ubuntu bash
+
+Buscar el metodo de instalacion de mysql para tener el comando
+Hacer update de la cache de los paquetes
+instalar mysql-client
+
+
+
+# Crear un contenedor MySQL
+
+1. Jalar la imagen de mysql de docker
+   >> docker pull mysql
+
+2. Crear una imagen de mysql 5.7  
+   >> docker run -d --name my-db1 -e "MYSQL_ROOT_PASSWORD=12345678" mysql:5.7
+
+3. Observar que ocurre en la base de datos.
+   >> docker logs -f my-db1
+   >> mysql -u root -p12345678
+[No se va a poder conectar a la base de datos]
+
+4. Inspeccionar la base de datos y sacar el valor de IPAddress. 
+   >> docker inspect my-db1 | grep IPAddress
+
+5. Hacer el llamado a la base de datos.
+   >> mysql  -u root -h [IPAddress] -p12345678
+
+6. Mostrar las bases de datos.
+   >> show databases;
+
+[Nuestro equipo debe tener el mapeo de puertos para que otros equipos puedan acceder a la base de datos]
+[ya que solo nosotros podemos acceder al IPAddress]
+7. Crear otro contenedor que tenga mapeo de puertos y que tenga una variable de entorno que cree una
+nueva base de datos, un  usuario y una nueva contrasena.
+   >> docker run -d -p 3333:3306 --name my-db2 -e "MYSQL_ROOT_PASSWORD=12345678" -e "MYSQL_DATABASE=docker-db"
+      -e "MYSQL_USER=docker-user" -e "MYSQL_PASSWORD=87654321" mysql:5.7
+
+8. Comprobar el proceso.
+   >> docker logs -f my-db2
+
+9. Crear una consulta de la base de datos desde mi sistema.
+   >> mysql -u root -p12345678 -h 127.0.0.1 --port 3333
+
+10. Mostrar las bases de datos.
+    >> show databases;
+
+11. Conectarse como el usuario que se creo.
+    >> mysql -u docker-user -p87654321 -h 127.0.0.1 --port 3333
+
+12. Mostrar las bases de datos.
+
+13. Eliminar todos los contenedores.
+    >> docker rm -fv $(docker ps -aq)
+
+
+
+
+# Crear un contenedor Mongo
+
+Mongo es una base de datos que esta orientada a objetos y su formato no es como sql.
+
+1. Crear un contenedor de mongo que se corra detras, con un nombre, el puerto oficial de mongo para las 
+maquinas y el puerto de mongo 27017:27017 y la imagen mongo.
+   >> docker run -d --name my-mongo -p 27017:27017 mongo
+
+2. Verificar que el contenedor fue creado.
+   >> docker ps
+
+3. Crear otro contenedor con un puerto diferente de mi sistema y verificar que fue creado.
+   >> docker run -d --name my-mongo2 -p 27018:27017 mongo
+   >> docker ps
+
+4. Ver cuanta RAM estan consumiendo los dockers my-mongo2 my-mongo1.
+   >> docker stats my-mongo1-2
+
+5. Ver los logs de cada contenedor.
+   >> docker logs -f my-mongo1-2
+
+6. Bajar e instalar robo3t y crear una conexion.
+
+
+
+# Crear un contenedor Apache/Nginx/Tomcat
+
+1. Crear un contenedor con la imagen de nginx.
+   >> docker run -d -p 8888:80 --name nginx nginx
+
+2. Observar en localhost si esta funcionando.
+
+3. Crear un contenedor con la imagen de apache.
+   >> docker run -d -p 9999:80 --name apache httpd
+
+4. Observar si funciona en localhost.
+
+5. Descargar una version ligera de Tomcat (alpine).
+   >> docker pull tomcat:9.0.8-jre8-alpine
+
+6. Crear un contenedor de Tomcat.
+   >> docker run -d -p 7777:8080 --name tomcat tomcat:9.0.8-jre8-alpine
+
+
+# Crear un contenedor PostgreSQL
+
+1. Descargar la imagen oficial de postgresql.
+   >> docker pull postgres
+
+2. Crear una imagen con variables de entorno con la contrasena, el usuario , una base de datos y el puerto
+en la imagen oficial de postgres es el puerto 5432.
+   >> docker run -d --name postgres -e "POSTGRES_PASSWORD=12345678" -e "POSTGRES_USER=docker-user" 
+      -e "POSTGRES_DB=docker-db" -p 5432:5432 postgres
+
+3. Ingresar al bash del contenedor
+   >> docker exec -ti postgres bash
+
+4. Crear la conexion entre la base de datos.
+   >> psql -d docker-db -U docker-user
+
+
+
+# Crear un contenedor que tenga jenkins
+
+1. Descargar la imagen oficial
+   >> docker pull jenkins/jenkins
+
+2. Crear un contenedor de jenkins con un puerto, nombre, que corra en el fondo y una imagen jenkins
+   >> docker run -d -p 7070:8080 --name jenkins jenkins/jenkins
+
+3. Esperar a que cargue la paguina.
+
+4. Entrar a la terminal del contenedor para ingresar a la carpeta que nos muestra la pagina para hacer login.
+   >> docker exec -ti jenkins bash
+
+5. Buscar el password para ingresar.
+   >> cat /var/jenkins_home/secrets/initialAdminPassword
+
+6. Copiar y pegar en la pagina.
+
+
+
+
+# Administrar usuarios 
+
+1. Crear un dockerfile que venga del sistema operativo ubunto, que tenga una var de entorno prueba 1234 que
+corra el comando useradd nombre-usuario y que especifique que ese usuario esta usando USER nom-user.
+
+2. Crear la imagen con ese dockerfile
+   >> docker build -t ubuntu:prueba .
+
+3. Crear un contenedor con esa imagen que se cargue con os y que tenga nombre.
+   >> docker run -d -ti --name prueba ubuntu:prueba
+
+4. Ingresar al contenedor.
+   >> docker exec -ti prueba bash
+
+[Si se quita el usuario del dockerfile el usuario va a ser root en el contenedor]
+
+5. Para cambiar el usuario que va a entrar se puede cambiar cuando se ingresa al contenedor.
+   >> docker exec -ti -u nom-usuario prueba bash
+
+
+
+
+# Limitar recursos a un contenedor
+
+[Limitar la RAM]
+1. Crear un contenedor con la imagen oficial de mongo que se llame mongo.
+   >> docker run -d --name mongo mongo
+
+2. Verificar la ram que consume mongo y cuanto es lo maximo que puede consumir.
+   >> docker stats mongo
+
+3. Crear un contenedor con la imagen de mongo limitando su memoria a 500mb y darle nombre.
+   >> docker run -d -m "500mb" --name mongo2 mongo
+
+4. Verificar la ram y el limite.
+   >> docker stats mongo2
+
+[Tambien se puede modificar en gb]
+
+[Limitar cpu]
+1. Filtrar la palabra model name de /proc/cpuinfo
+   >> grep "model name" /proc/cpuinfo
+
+2. Filtrar lo mismo pero agregarle un conteo de lineas (esos son el numero de cpus que se tienen).
+   >> grep "model name" /proc/cpuinfo | wc -l
+
+3. Crear un contenedor con la imagen de mongo limitando 1gb con x cpus y darle nombre.
+   >> docker run -d -m "1gb" --cpuset-cpus (0-3, 0,1) --name  mongo3 mongo
+
+
+
+
+# Copiar archivos a un contenedor
+
+1. Crear un contenedor con apache y exponerlo en el puerto 80.
+   >> docker run -d -p 80:80 --name apache httpd
+
+2. Crear un index.html con una carita feliz o cualquier texto.
+   >> echo "texto" > index.html
+
+3. Ver el contenido de esa carpeta.
+   >> cat index.html
+
+4. Copiar el archivo desde fuera del contenedor hacia dentro en el directorio temporal.
+   >> docker cp index.html apache:/tmp
+
+5. Ingresar al contenedor y mostrar el contenido del archivo.
+   >> docker exec -ti apache bash
+
+6. Ver el contenido del archivo.
+   >> cat /tmp/index.html
+
+7. En un archivo ya creado que esta en la carpeta default de apache /usr/local/apache2/htdocs sobreescribirlo
+por el archivo que esta en el contenedor.
+   >> docker cp index.html apache:/usr/local/apache2/htdocs/index.html
+
+[Si se quiere copiar desde el contenedor a mi maquina]
+1. Copiar un log del contenedor dpkg.log en mi directorio.
+   >> docker cp apache:/var/log/dpkg.log .
+
+
+
+# Convertir un contenedor en una imagen
+[docker commit] : Es un comando que nos sirve para tomar el estado de un contenedor que esta corriendo y 
+transformarlo en una imagen, no es muy buena practica, son mejores los volumenes.
+
+1. Crear un directorio que se llame commit.
+
+2. Crear un Dockerfile que el os sea ubuntu, crear un volumen /opt/volumen.
+
+3. Construir la imagen
+   >> docker build -t ubuntu-test .
+
+4. Crear un contenedor normal con esa imagen.
+   >> docker run -dti --name ubuntu ubuntu-test
+
+5. Ingresar al contenedor (Cosa que no se deberia hacer)
+   >> docker exec -ti ubuntu bash
+
+6. Crear un archivo dentro de la carpeta /opt/volumen que se llame file1.txt y fuera de ella.
+   >> touch file1
+   >> touch volumen/file1
+
+[Si se borra el contenedor se borran todos los archivos creados en el contenedor]
+
+7. Salimos del contenedor y escribimos el contenedor como una nueva imagen.
+   >> docker commit ubuntu ubuntu-res
+
+8. Eliminar el contenedor que corria.
+   >> docker rm -fv $(docker ps -aq)
+
+9. Crear un contenedor con la imagen que esta en el resultado de los cambios y verificar que esten los archivos
+   >> docker run -dti --name ubuntu ubuntu-res /bin/bash
+   >> docker exec -ti ubuntu bash
+   >> ls 
+   >> ls volumen/
+
+[Si se tiene en el Dockerfile un volumen y se crea una imagen de un contenedor corriendo no se van a guardar]
+[Los archivos que esten en el directorio de esa carpeta.]
+
+
+
+
+# Sobrescribir el cmd de una imagen sin un dockerfile
+1. Crear un contenedor en el puerto 8080:8080 de ubuntu que corra detras y darle el comando de python que es
+un modulo que crea un server pequeno de http en el puerto 8080.
+   >> docker run -d -p 8080:8080 ubuntu python -m SimpleHTTPServer 8080
+
+
+
+
+# Destruir contenedores automaticamente
+
+1. Crear el contenedor.
+   >> docker run -dti --name ubuntu ubuntu 
+
+2. Ingresar al contenedor.
+   >> docker exec -ti ubuntu bash
+
+3. Revisar el archivo profile.
+   >> cat /etc/profile
+
+4. Eliminarlo y crear un nuevo contenedor que sea temporal, que se destruya automaticamente.
+   >> docker run --rm -ti --name ubuntu ubuntu bash
+
+5. Ver el archivo profile otra vez.
+   >> cat /etc/profile
+
+6. Salir y observar si se borro el contenedor.
+   >> exit
+   >> docker ps
+
+
+
+# Cambiar el documento root de docker
+
+0. Crear un usuario diego en un contenedor.
+
+1. Obtener el directorio root actual.
+   >> docker info | grep -i root
+
+2. Cambiar al usuario root y ver el listado ll de /var/lib/docker
+   >> sudo su
+
+[Toda la informacion de las imagenes esta en la carpeta var/lib/docker]
+
+[Cambiar el directorio root]
+1. Editar el archivo que esta en /lib/systemd/system/docker.service
+
+2. Modificar la linea de ExecStart para que ahora sea /opt
+   ExecStart=/usr/bin/dockerd --data-root /opt
+
+3. [Esta INCOMPLETO, falta ultimo vid pero es para cambiar el dir root del contenedor]
+
+
+
+
 
 
