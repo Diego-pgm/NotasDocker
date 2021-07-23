@@ -1,0 +1,288 @@
+Docker Compose
+
+Es una herramienta de Docker que nos permite crear aplicaciones multi-contenedor.
+
+Instalacion:
+>> sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+>> sudo chmod +x /usr/local/bin/docker-compose
+>> /usr/lcoal/bin/docker-compose o docker-compose
+
+# Primeros pasos en compose
+
+Docker-compose nos facilita la forma en la que creamos contenedores.
+
+Esto se hace en un archivo .yml y este archivo se compone de 4 partes
+version [obligatoria] : La version del docker compose (es mas recomendado usar la ultima).
+services [oblgatoria] : Los servicios de los que se van a crear los contenedores.
+volumes [opcional] :
+network [opcional] :
+
+version: '3'
+services: 
+  nombre-servicio: # Nombre del servicio
+    container_name: "Nombre del contenedor" 
+    ports: # Los puertos del servicio.
+      - "8080:80"
+    image: nombre-imagen
+
+Para correrlo: 
+>> docker-compose up -d
+
+Docker por defecto crea una red donde arroja esos contenedores.
+
+Para eliminar el contenedor (en el directorio donde esta docker.yml) se corre el comando:
+>> docker-compose down
+
+Esto genera 3 pasos
+1. Detiene el contenedor.
+2. Elimina el contenedor.
+3. Elimina la red.
+
+
+
+# Variables de entorno docker-compose
+
+Para especificar variables de entorno se tiene que hacer dentro del servicio con la palabra 'environment':
+ej:
+environment:
+   - "variable=valor"
+   - "variable=vlaor"
+
+Crear un archivo yml de mysql.
+version: '3'
+services:
+  db:
+    image: mysql:5.7
+    container_name: mysql
+    ports:
+      - "3306:3306"
+    environment:
+      - "MYSQL_ROOT_PASSWORD=1234"
+
+Ingresar al contenedor con docker exec y verificar que tiene mysql
+
+Tambien se pueden especificar varias variables en un archivo con la terminacion .env
+>> echo "variable=valor" > nombre-arch.env
+
+y definirlo dentro del archivo .yml en lugar de environment de la sig manera:
+env_file: nombre-arch.env
+
+
+# Volumenes en compose
+
+Dentro del archivo .yml se agregan los volumenes que se quieren:
+version: '3'
+services:
+  web:
+    container_name: ngnix
+    ports:
+      - "8080:80"
+    volumes: -> Integra volumenes dentro del contenedor
+      - "vol2:/usr/share/nginx/html" -> aqui guarda nginx sus archivos html.
+    image: nginx
+volumes:
+  vol2: -> Crea el volumen
+
+
+Como verificar que funciona nuestro volumen:
+1. Ir a la ruta del root.
+   >> docker info | grep -i root
+
+2. Con la direccion que nos arroja ir a /volumes.
+3. En _data esta el html del index y podemos modificarlo.
+
+
+
+Otra forma de verificar que funciona:
+1. Eliminar todo los contenedores que estan con docker compose.
+   >> docker-compose down
+
+2. Levantar de nuevo el docker-compose.
+
+
+Definir un volumen host
+
+Para definir un volumen que este en ele host se tiene que mapear la carpeta donde esta el codigo fuente con 
+la carpeta donde nginx guarda sus archivos html.
+
+version: '3'
+services: 
+  web:
+    container_name: nginx2
+    ports:
+      - "8081:80"
+    volumes:
+      - "/home/diego/Docker/volumen-compose/html:/usr/share/nginx/html" -> agrega un volumen en el host
+    image: nginx
+
+
+
+# Redes en compose
+
+
+version: '3'
+services:
+  web:
+    container_name: ngnix
+    ports:
+      - "8080:80"
+    image: nginx
+    networks:
+      - net-test -> Incluye la red en el contenedor
+networks: -> Crea la red 
+  net-test:
+
+Inspeccionar el contenedor para ver la red.
+>> docker inspect ngnix
+
+Crear dos contenedores de apache para hacer ping:
+
+services:
+  web:
+    container_name: ngnix1
+    ports:
+      - "8080:80"
+    image: httpd
+    networks:
+      - net-test -> Incluye la red en el contenedor
+ web2:
+    container_name: ngnix2
+    ports:
+      - "8081:80"
+    image: httpd
+    networks:
+      - net-test
+networks: -> Crea la red 
+  net-test:
+
+Hacer un ping desde una a la otra
+>> docker exec -ti nginx2 bash -c "ping nginx1"
+
+
+
+# Construir imagenes con docker compose
+[Crear carpeta nueva]
+Crear un docker-composer.yml y agregarle lo siguiente:
+
+version: '3'
+services:
+  web:
+    container_name: web
+    image: web-test -> nombre de la imagen que vamos a crear
+    build: -> Es para crear la imagen Se especifica una carpeta (. <-para la carpeta actual)
+      context: . -> nos dice en donde esta la carpeta                  |> Son para especificar un Dockerfile
+      dockerfile: Dockerfile -> el archivo que va a crear la imagen    |> diferente al que esta creado
+
+Archivo Dockerfile:
+
+FROM centos
+
+RUN mkdir /opt/test
+
+
+
+
+# Sobreescribir el CMD de un contenedor con Compose
+
+En un docker-compose.yml:
+
+version: '3'
+services:
+  web:
+    image: centos
+    command: python -m SimpleHTTPServer 8080
+    ports:
+      - "8080:8080"
+
+Ejecutar un contenedor con centos o ubuntu
+>> docker run -dti ubuntu/centos
+
+Borrar todos los contenedores
+>> docker rm -fv $(docker ps -aq)
+
+Crear el contenedor con el archivo.yml como argumento
+>> docker-compose -f docker-compose.yml up -d
+
+
+
+# Limitar los recursos de los contenedores con Compose
+
+Crear un archivo yml llamado docker-compose-memory.yml que contenga:
+
+version: '2'
+services:
+  web:
+    container_name: nginx
+    mem_limit: 20m -> Limita la memoria del contenedor
+    cpuser: "0" -> asigna la cantidad de cpus que va a usar el contenedor
+    image: nginx:alpine
+
+Crear el contenedor
+>> docker-compose -f docker-compose-memory.yml up -d
+
+Checar las stats del contenedor
+>> docker stats nginx
+
+
+
+# Politica de reinicio de contenedores
+
+Significa las condiciones en las que un contenedor debe ser reiniciado.
+
+Crear un archivo .yml que contenga:
+version: '3'
+services:
+  test:
+    container_name: test
+    image: restart-image
+    build: .
+    restart: always --> siempre se reinicia
+           : unless-stopped --> si yo lo detengo o docker lo detiene no lo reinicia
+           : on-failure --> el contenedor se muere porque tuvo un error interno
+
+
+
+Crear un dockerfile:
+FROM centos
+
+COPY start.sh /start.sh
+
+RUN chmod +x /start.sh
+
+
+
+Crear el archivo run.sh
+#!/bin/bash
+
+echo "Estoy vivo"
+sleep 5
+echo "Estoy detenido"
+
+
+Construir la imagen:
+>> docker-compose build
+
+Construir el contenedor
+>> docker-compose up -d
+
+Comandoo para ejecutar varias veces:
+>> watch -d docker ps
+
+
+Ver los logs:
+>> docker logs -f test
+
+
+
+
+# Como cambiar el prefijo que acompana al nombre de las redes
+
+Cuando se construya un contenedor se le pasa la bander -p
+>> docker-compose -p prefijo -f arhivo.yml up -d
+>> docker-compose -p webtest -f docker-compose-cmd.yml up -d
+
+
+
+
+# Instalando WordPress + MySQL
+
